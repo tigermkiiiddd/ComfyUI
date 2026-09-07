@@ -464,6 +464,12 @@ class PromptServer():
         @routes.post("/upload/image")
         async def upload_image(request):
             post = await request.post()
+            # Images pasted from the clipboard are uploaded as temp files, which
+            # LoadImage cannot reference after a workflow reload. Redirect them
+            # into input so pasted images persist like uploaded ones.
+            if post.get("type") == "temp" and not post.get("subfolder"):
+                post = dict(post)
+                post["type"] = "input"
             return image_upload(post)
 
 
