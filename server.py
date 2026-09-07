@@ -1159,6 +1159,14 @@ class PromptServer():
 
         @routes.post("/interrupt")
         async def post_interrupt(request):
+            transport = request.transport
+            peer = transport.get_extra_info("peername") if transport is not None else None
+            interrupt_source = (
+                f"remote={request.remote!r} peer={peer!r} "
+                f"user_agent={request.headers.get('User-Agent', '')!r} "
+                f"origin={request.headers.get('Origin', '')!r} "
+                f"referer={request.headers.get('Referer', '')!r}"
+            )
             try:
                 json_data = await request.json()
             except json.JSONDecodeError:
@@ -1174,7 +1182,7 @@ class PromptServer():
                 for item in currently_running:
                     # item structure: (number, prompt_id, prompt, extra_data, outputs_to_execute)
                     if item[1] == prompt_id:
-                        logging.info(f"Interrupting prompt {prompt_id}")
+                        logging.info(f"Interrupting prompt {prompt_id} {interrupt_source}")
                         should_interrupt = True
                         break
 
@@ -1184,7 +1192,11 @@ class PromptServer():
                     logging.info(f"Prompt {prompt_id} is not currently running, skipping interrupt")
             else:
                 # No prompt_id provided, do a global interrupt
-                logging.info("Global interrupt (no prompt_id specified)")
+                logging.warning(
+                    "Global interrupt (no prompt_id specified) %s body_keys=%s",
+                    interrupt_source,
+                    sorted(json_data.keys()),
+                )
                 nodes.interrupt_processing()
 
             return web.Response(status=200)
