@@ -557,6 +557,16 @@ class PromptServer():
                         if os.path.commonpath((os.path.abspath(full_output_dir), output_dir)) != output_dir:
                             return web.Response(status=403)
                         output_dir = full_output_dir
+                    elif "/" in filename or "\\" in filename:
+                        # filename may embed a subfolder path (e.g. "pasted/image.png")
+                        # for pasted assets; keep it so previews resolve after a reload.
+                        head, tail = os.path.split(filename)
+                        if head:
+                            full_output_dir = os.path.join(output_dir, head)
+                            if os.path.commonpath((os.path.abspath(full_output_dir), output_dir)) != output_dir:
+                                return web.Response(status=403)
+                            output_dir = full_output_dir
+                            filename = tail
 
                     filename = os.path.basename(filename)
                     file = os.path.join(output_dir, filename)
